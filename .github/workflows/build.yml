@@ -1,40 +1,60 @@
-name: Build K40 Kernel Module
+name: Build Kernel Module for Redmi K40 Gaming
 
-on: push
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:   # 支持手动触发
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Install cross compiler
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install cross compiler and dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu build-essential flex bison libssl-dev
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            build-essential \
+            flex \
+            bison \
+            libssl-dev \
+            bc
 
-      - name: Clone kernel source
+      - name: Clone kernel source (Xiaomi ares 4.14.186)
         run: |
-          git clone --depth 1 --branch ares-r-oss https://github.com/MiCode/Xiaomi_Kernel_OpenSource.git kernel
+          git clone --depth 1 --branch ares-r-oss \
+            https://github.com/MiCode/Xiaomi_Kernel_OpenSource.git kernel
+          # 如果上述分支无效，可尝试：
+          # git clone --depth 1 --branch lineage-18.1 \
+          #   https://github.com/LineageOS/android_kernel_xiaomi_ares.git kernel
 
-      - name: Apply custom config
+      - name: Apply custom kernel config
         run: |
-          if [ -d "kernel_config" ]; then echo "kernel_config is a directory!"; exit 1; fi
+          # 检查 kernel_config 是否为文件
+          if [ -d "kernel_config" ]; then
+            echo "错误：kernel_config 是一个目录，请提供纯文件！"
+            exit 1
+          fi
           cp kernel_config kernel/.config
           cd kernel
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
-      - name: Prepare modules build
+      - name: Prepare kernel build (modules_prepare)
         run: |
           cd kernel
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
 
-      - name: Build module
+      - name: Build the kernel module
         id: build
         run: |
-          export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
+          export ARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
           make -C $(pwd)/kernel M=$(pwd) modules 2>&1 | tee build.log
-          # 检查是否生成了 ko
+          # 检查是否生成 kern_chan.ko
           if [ -f "kern_chan.ko" ]; then
             echo "ko_exists=true" >> $GITHUB_ENV
           else
@@ -54,44 +74,49 @@ jobs:
             exit 1
           fi
 
-      - name: Create installer
+      - name: Create installer script (embed ko as base64)
         if: env.ko_exists == 'true'
         run: |
+          # 正确展开变量，使用双引号
           BASE64_KO=$(base64 -w 0 kern_chan.ko)
-          cat > install.sh << 'EOF'
+          cat > install.sh << EOF
           #!/system/bin/sh
           set -e
-          echo "[1/3] 解码模块..."
+          echo "[1/3] 解码内核模块..."
           TMP_KO=/data/local/tmp/kern_chan.ko
-          echo '$BASE64_KO' | base64 -d > $TMP_KO
-          chmod 644 $TMP_KO
-          SIZE=$(stat -c %s $TMP_KO 2>/dev/null || stat -f %z $TMP_KO 2>/dev/null)
-          if [ -z "$SIZE" ] || [ "$SIZE" -eq 0 ]; then
-              echo "错误：解码后的模块为空！"
+          echo "${BASE64_KO}" | base64 -d > \$TMP_KO
+          chmod 644 \$TMP_KO
+
+          # 检查解码后的文件大小
+          SIZE=\$(stat -c %s \$TMP_KO 2>/dev/null || stat -f %z \$TMP_KO 2>/dev/null || wc -c < \$TMP_KO)
+          if [ -z "\$SIZE" ] || [ "\$SIZE" -eq 0 ]; then
+              echo "错误：解码后的模块文件为空！"
               exit 1
           fi
+
           echo "[2/3] 加载模块..."
-          if insmod $TMP_KO; then
-              echo "加载成功"
+          if insmod \$TMP_KO; then
+              echo "模块加载成功"
           else
-              echo "加载失败，内核日志："
+              echo "模块加载失败，内核日志："
               dmesg | tail -20
               exit 1
           fi
+
           sleep 1
           if [ -e /dev/kern_chan ]; then
               echo "========================================"
-              echo ">>> 连接地址: /dev/kern_chan"
-              echo ">>> 重启后模块自动消失"
+              echo ">>> 内核接口连接地址: /dev/kern_chan"
+              echo ">>> 重启后模块自动消失，无需手动清理"
               echo "========================================"
           else
-              echo "错误：设备节点未创建，请检查 dmesg"
+              echo "错误：设备节点 /dev/kern_chan 未创建，请检查 dmesg"
               exit 1
           fi
           EOF
           chmod +x install.sh
 
-      - name: Upload installer
+      - name: Upload installer artifact
         if: env.ko_exists == 'true'
         uses: actions/upload-artifact@v4
         with:
