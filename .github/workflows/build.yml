@@ -6,96 +6,93 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install cross compiler and dependencies
+      - name: Install cross compiler
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu build-essential flex bison libssl-dev
 
-      - name: Clone kernel source (Xiaomi ares 4.14.186)
+      - name: Clone kernel source
         run: |
           git clone --depth 1 --branch ares-r-oss https://github.com/MiCode/Xiaomi_Kernel_OpenSource.git kernel
-          # 如果上面的分支找不到，可以改用下面的（LineageOS 维护的）
-          # git clone --depth 1 --branch lineage-18.1 https://github.com/LineageOS/android_kernel_xiaomi_ares.git kernel
 
-      - name: Apply custom kernel config
+      - name: Apply custom config
         run: |
-          # 确保 kernel_config 是文件（不是目录）
-          if [ -d "kernel_config" ]; then
-            echo "错误：kernel_config 是一个目录，请确保它是普通文件。"
-            exit 1
-          fi
+          if [ -d "kernel_config" ]; then echo "kernel_config is a directory!"; exit 1; fi
           cp kernel_config kernel/.config
           cd kernel
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
-      - name: Prepare kernel build (modules_prepare)
+      - name: Prepare modules build
         run: |
           cd kernel
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
 
-      - name: Build your kernel module
+      - name: Build module
+        id: build
         run: |
-          export ARCH=arm64
-          export CROSS_COMPILE=aarch64-linux-gnu-
-          make -C $(pwd)/kernel M=$(pwd) modules
-
-      - name: Verify that kern_chan.ko exists and is non-empty
-        run: |
-          ls -la *.ko
-          if [ ! -f "kern_chan.ko" ]; then
-            echo "错误：kern_chan.ko 未生成！"
+          export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
+          make -C $(pwd)/kernel M=$(pwd) modules 2>&1 | tee build.log
+          # 检查是否生成了 ko
+          if [ -f "kern_chan.ko" ]; then
+            echo "ko_exists=true" >> $GITHUB_ENV
+          else
+            echo "ko_exists=false" >> $GITHUB_ENV
+            echo "构建失败：未生成 kern_chan.ko"
+            echo "=== build.log 最后 100 行 ==="
+            tail -100 build.log
             exit 1
           fi
+
+      - name: Verify ko size
+        if: env.ko_exists == 'true'
+        run: |
+          ls -la kern_chan.ko
           if [ ! -s "kern_chan.ko" ]; then
-            echo "错误：kern_chan.ko 是空文件！"
+            echo "kern_chan.ko 为空文件"
             exit 1
           fi
-          echo "kern_chan.ko 验证通过，大小：$(stat -c %s kern_chan.ko) 字节"
 
-      - name: Create installer script (embed .ko as base64)
+      - name: Create installer
+        if: env.ko_exists == 'true'
         run: |
           BASE64_KO=$(base64 -w 0 kern_chan.ko)
           cat > install.sh << 'EOF'
           #!/system/bin/sh
           set -e
-          echo "[1/3] 解码内核模块..."
+          echo "[1/3] 解码模块..."
           TMP_KO=/data/local/tmp/kern_chan.ko
           echo '$BASE64_KO' | base64 -d > $TMP_KO
           chmod 644 $TMP_KO
-
-          # 检查解码后的文件大小
           SIZE=$(stat -c %s $TMP_KO 2>/dev/null || stat -f %z $TMP_KO 2>/dev/null)
           if [ -z "$SIZE" ] || [ "$SIZE" -eq 0 ]; then
-              echo "错误：解码后的模块文件为空！"
+              echo "错误：解码后的模块为空！"
               exit 1
           fi
-
           echo "[2/3] 加载模块..."
           if insmod $TMP_KO; then
-              echo "模块加载成功"
+              echo "加载成功"
           else
-              echo "模块加载失败，内核日志："
+              echo "加载失败，内核日志："
               dmesg | tail -20
               exit 1
           fi
-
           sleep 1
           if [ -e /dev/kern_chan ]; then
               echo "========================================"
-              echo ">>> 内核接口连接地址: /dev/kern_chan"
+              echo ">>> 连接地址: /dev/kern_chan"
               echo ">>> 重启后模块自动消失"
               echo "========================================"
           else
-              echo "错误：设备节点 /dev/kern_chan 未创建，请检查 dmesg"
+              echo "错误：设备节点未创建，请检查 dmesg"
               exit 1
           fi
           EOF
           chmod +x install.sh
 
-      - name: Upload installer artifact
+      - name: Upload installer
+        if: env.ko_exists == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: installer
