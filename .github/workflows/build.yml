@@ -1,4 +1,4 @@
-name: Build K40 Module with Custom Config
+name: Build K40 Module (ARM64)
 on: push
 
 jobs:
@@ -7,46 +7,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 安装交叉编译工具链（推荐使用 Android NDK 的 clang，更接近手机环境）
-      - name: Setup toolchain
+      # 安装标准交叉编译工具链 (gcc-aarch64-linux-gnu)
+      - name: Install cross compiler
         run: |
           sudo apt-get update
-          sudo apt-get install -y git make flex bison libssl-dev
-          # 下载 Android NDK r23c（包含 aarch64-linux-android-clang）
-          wget https://dl.google.com/android/repository/android-ndk-r23c-linux.zip
-          unzip android-ndk-r23c-linux.zip
-          export PATH=$PWD/android-ndk-r23c/bin:$PATH
-          echo "NDK_PATH=$PWD/android-ndk-r23c" >> $GITHUB_ENV
+          sudo apt-get install -y gcc-aarch64-linux-gnu build-essential flex bison libssl-dev
 
-      # 克隆小米开源内核（ares 的 4.14.186 分支）
+      # 克隆小米开源内核 (ares 4.14.186)
       - name: Clone kernel source
         run: |
           git clone --depth 1 --branch ares-r-oss https://github.com/MiCode/Xiaomi_Kernel_OpenSource.git kernel
-          # 如果上面分支不对，可用：https://github.com/LineageOS/android_kernel_xiaomi_ares.git 的 lineage-18.1 分支
+          # 如果分支不对，可改用 https://github.com/LineageOS/android_kernel_xiaomi_ares.git -b lineage-18.1
 
-      # 使用你提供的 config 覆盖内核源码中的 .config
-      - name: Apply custom config
+      # 用你的 config 覆盖，并准备编译环境
+      - name: Apply config and prepare
         run: |
           cp kernel_config kernel/.config
-          # 注意：内核编译需要旧版配置，运行 make olddefconfig 来更新
           cd kernel
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- olddefconfig
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
 
-      # 准备内核模块编译环境（生成 Module.symvers 等）
-      - name: Prepare modules build
+      # 编译你的内核模块（源码在仓库根目录）
+      - name: Build module
         run: |
-          cd kernel
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- modules_prepare
-
-      # 编译你的内核模块（模块源码在仓库根目录）
-      - name: Build your module
-        run: |
-          export CROSS_COMPILE=aarch64-linux-android-
           export ARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
           make -C $(pwd)/kernel M=$(pwd) modules
 
-      # 将 .ko 嵌入 install.sh
-      - name: Create installer script
+      # 将 .ko 嵌入 install.sh（并添加强制加载逻辑）
+      - name: Create installer
         run: |
           BASE64_KO=$(base64 -w 0 kern_chan.ko)
           cat > install.sh << 'EOF'
@@ -57,10 +46,11 @@ jobs:
           echo '$BASE64_KO' | base64 -d > $TMP_KO
           chmod 644 $TMP_KO
 
-          echo "[2/3] 加载模块（使用普通 insmod）..."
-          insmod $TMP_KO
-          # 如果普通加载失败，尝试强制加载（极少情况）
-          if [ $? -ne 0 ]; then
+          echo "[2/3] 加载模块..."
+          # 先尝试普通加载
+          if insmod $TMP_KO 2>/dev/null; then
+            echo "普通加载成功"
+          else
             echo "普通加载失败，尝试强制加载 (insmod -f)..."
             insmod -f $TMP_KO
           fi
@@ -72,7 +62,7 @@ jobs:
             echo ">>> 重启后模块自动消失"
             echo "========================================"
           else
-            echo "错误：设备节点未创建，请查看 dmesg"
+            echo "错误：设备节点未创建，请运行 dmesg 查看"
             exit 1
           fi
           EOF
