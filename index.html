@@ -1,473 +1,261 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>KernChan · Temporary Kernel Access</title>
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kernchan – a temp kernel thing</title>
     <style>
-        /* Global Reset & Base */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* reset & base */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: #0b0e14;
-            color: #c9d1d9;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
+            background: #faf7f0;  /* warm off-white */
+            color: #2c2b28;
+            font-family: Georgia, 'Times New Roman', serif;
+            line-height: 1.7;
             padding: 2rem 1.5rem;
-        }
-
-        .container {
-            max-width: 1100px;
+            max-width: 880px;
             margin: 0 auto;
         }
-
-        /* Header / Nav */
-        .navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem 0 2rem 0;
-            border-bottom: 1px solid #21262d;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .logo {
-            font-size: 1.8rem;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #58a6ff, #7c3aed);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .logo i {
-            -webkit-text-fill-color: #58a6ff;
-            margin-right: 8px;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 1.8rem;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .nav-links a {
-            color: #8b949e;
+        a {
+            color: #3b5e3b;
             text-decoration: none;
+            border-bottom: 1px dotted #b6a68b;
+        }
+        a:hover { border-bottom: 2px solid #3b5e3b; }
+
+        h1, h2, h3 {
             font-weight: 500;
-            transition: 0.2s;
-            font-size: 0.95rem;
+            letter-spacing: -0.02em;
         }
-        .nav-links a:hover {
-            color: #f0f6fc;
+        h1 {
+            font-size: 2.8rem;
+            margin-top: 0.2rem;
+            margin-bottom: 0.2rem;
+            line-height: 1.2;
         }
-        .nav-links .github-btn {
-            background: #21262d;
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
-            border: 1px solid #30363d;
+        h1 small {
+            font-size: 1.2rem;
+            color: #6b5e4e;
+            font-weight: 300;
+            display: block;
+            margin-top: 0.2rem;
         }
-        .nav-links .github-btn:hover {
-            background: #30363d;
+        h2 {
+            font-size: 1.8rem;
+            margin-top: 2.8rem;
+            border-bottom: 2px solid #dacdb8;
+            padding-bottom: 0.3rem;
+        }
+        h3 {
+            font-size: 1.2rem;
+            margin: 1.5rem 0 0.5rem 0;
         }
 
-        /* Hero */
-        .hero {
-            padding: 4rem 0 3rem 0;
-            text-align: center;
-        }
-        .hero h1 {
-            font-size: 3.2rem;
-            font-weight: 800;
-            letter-spacing: -1px;
-            margin-bottom: 1.2rem;
-        }
-        .hero h1 span {
-            background: linear-gradient(to right, #f0883e, #f6a85b);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .hero p {
-            font-size: 1.2rem;
-            color: #8b949e;
-            max-width: 700px;
-            margin: 0 auto 2rem auto;
-        }
-        .badge-group {
+        /* header / nav */
+        .top-nav {
             display: flex;
             flex-wrap: wrap;
-            justify-content: center;
-            gap: 0.8rem;
-            margin-bottom: 1.5rem;
-        }
-        .badge {
-            background: #161b22;
-            padding: 0.3rem 1rem;
-            border-radius: 30px;
-            font-size: 0.85rem;
-            border: 1px solid #30363d;
-            color: #b1bac4;
-        }
-        .badge i {
-            color: #58a6ff;
-            margin-right: 6px;
-        }
-
-        .code-block {
-            background: #0d1117;
-            border: 1px solid #30363d;
-            border-radius: 12px;
-            padding: 1.2rem 1.5rem;
-            margin: 1.5rem auto;
-            max-width: 600px;
-            text-align: left;
-            overflow-x: auto;
-            font-family: 'JetBrains Mono', 'Fira Code', monospace;
-            font-size: 0.9rem;
-            color: #e6edf3;
-        }
-        .code-block .prompt {
-            color: #58a6ff;
-        }
-        .code-block .cmd {
-            color: #f6a85b;
-        }
-
-        .hero .btn-primary {
-            display: inline-block;
-            background: #238636;
-            color: #fff;
-            padding: 0.8rem 2.4rem;
-            border-radius: 30px;
-            font-weight: 600;
-            text-decoration: none;
-            margin-top: 0.5rem;
-            border: 1px solid #2ea043;
-            transition: 0.2s;
-        }
-        .hero .btn-primary:hover {
-            background: #2ea043;
-            transform: scale(1.02);
-        }
-
-        /* Section Headers */
-        section {
-            margin: 5rem 0;
-        }
-        .section-title {
-            font-size: 2rem;
-            font-weight: 700;
+            gap: 1.5rem;
+            padding: 0.8rem 0 1.2rem 0;
+            border-bottom: 1px dashed #b6a68b;
             margin-bottom: 2rem;
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-        }
-        .section-title i {
-            color: #58a6ff;
-        }
-        .divider {
-            height: 2px;
-            background: linear-gradient(to right, #21262d, #30363d, #21262d);
-            margin: 3rem 0;
-        }
-
-        /* Features Grid */
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-            gap: 2rem;
-        }
-        .feature-card {
-            background: #0d1117;
-            border: 1px solid #21262d;
-            border-radius: 16px;
-            padding: 1.8rem 1.5rem;
-            transition: 0.25s ease;
-        }
-        .feature-card:hover {
-            border-color: #58a6ff;
-            transform: translateY(-4px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
-        }
-        .feature-card i {
-            font-size: 2.2rem;
-            color: #58a6ff;
-            margin-bottom: 1rem;
-        }
-        .feature-card h3 {
-            font-size: 1.2rem;
-            margin-bottom: 0.5rem;
-            color: #f0f6fc;
-        }
-        .feature-card p {
-            color: #8b949e;
             font-size: 0.95rem;
         }
-
-        /* Command Table */
-        .cmd-table-wrap {
-            background: #0d1117;
-            border: 1px solid #21262d;
-            border-radius: 16px;
-            overflow-x: auto;
-            padding: 0.5rem;
+        .top-nav a {
+            border-bottom: none;
+            color: #3b5e3b;
         }
+        .top-nav a:hover {
+            border-bottom: 2px solid #3b5e3b;
+        }
+
+        .badge-list {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem 1.5rem;
+            margin: 1rem 0 1.5rem 0;
+            font-size: 0.9rem;
+            color: #4f4a3f;
+        }
+        .badge-list li::before {
+            content: "⏺ ";
+            color: #8f7a5c;
+        }
+
+        code, pre {
+            font-family: 'Courier New', Courier, monospace;
+            background: #ede7db;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #1f3a2b;
+        }
+        pre {
+            display: block;
+            padding: 1rem 1.2rem;
+            overflow-x: auto;
+            border: 1px dashed #b6a68b;
+            background: #f5f0e8;
+            border-radius: 6px;
+            margin: 0.8rem 0;
+        }
+        pre code {
+            background: none;
+            padding: 0;
+        }
+
         .cmd-table {
             width: 100%;
             border-collapse: collapse;
+            margin: 1rem 0;
             font-size: 0.95rem;
         }
         .cmd-table th {
             text-align: left;
-            padding: 1rem 1.2rem;
-            background: #161b22;
-            color: #f0f6fc;
+            padding: 0.5rem 0.8rem 0.5rem 0;
+            border-bottom: 1px solid #ccc3b2;
             font-weight: 600;
-            border-bottom: 2px solid #30363d;
         }
         .cmd-table td {
-            padding: 0.9rem 1.2rem;
-            border-bottom: 1px solid #21262d;
+            padding: 0.4rem 0.8rem 0.4rem 0;
+            border-bottom: 1px dotted #dacdb8;
         }
-        .cmd-table tr:last-child td {
-            border-bottom: 0;
+        .cmd-table .cmd {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: #3b5e3b;
         }
-        .cmd-table .cmd-name {
-            font-family: monospace;
-            color: #f6a85b;
+
+        .steps {
+            counter-reset: step;
+            list-style: none;
+            padding-left: 0;
+        }
+        .steps li {
+            counter-increment: step;
+            margin-bottom: 0.8rem;
+            padding-left: 2.2rem;
+            position: relative;
+        }
+        .steps li::before {
+            content: counter(step) ".";
+            position: absolute;
+            left: 0;
+            color: #8f7a5c;
             font-weight: 600;
         }
-        .cmd-table .cmd-desc {
-            color: #b1bac4;
+
+        hr {
+            border: 0;
+            border-top: 1px dashed #dacdb8;
+            margin: 3rem 0;
         }
 
-        /* Steps */
-        .steps {
-            display: flex;
-            flex-direction: column;
-            gap: 1.2rem;
-            counter-reset: step;
-        }
-        .step-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 1.2rem;
-            background: #0d1117;
-            border: 1px solid #21262d;
-            border-radius: 14px;
-            padding: 1.2rem 1.8rem;
-        }
-        .step-num {
-            background: #238636;
-            color: #fff;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 0.9rem;
-            flex-shrink: 0;
-        }
-        .step-content {
-            flex: 1;
-        }
-        .step-content code {
-            background: #161b22;
-            padding: 0.2rem 0.6rem;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            color: #f6a85b;
-            border: 1px solid #30363d;
-        }
-
-        /* Footer */
         .footer {
-            margin-top: 5rem;
-            padding-top: 2rem;
-            border-top: 1px solid #21262d;
-            text-align: center;
-            color: #484f58;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #dacdb8;
             font-size: 0.9rem;
-        }
-        .footer a {
-            color: #58a6ff;
-            text-decoration: none;
-        }
-        .footer a:hover {
-            text-decoration: underline;
+            color: #6b5e4e;
         }
 
-        /* Responsive */
-        @media (max-width: 640px) {
-            body { padding: 1rem; }
-            .hero h1 { font-size: 2.2rem; }
-            .navbar { flex-direction: column; align-items: flex-start; }
-            .nav-links { width: 100%; justify-content: flex-start; }
-            .step-item { flex-direction: column; align-items: flex-start; }
+        /* responsive */
+        @media (max-width: 600px) {
+            body { padding: 1.2rem; }
+            h1 { font-size: 2.2rem; }
+            .top-nav { gap: 0.8rem; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
 
-        <!-- Navbar -->
-        <nav class="navbar">
-            <div class="logo"><i class="fas fa-bolt"></i>KernChan</div>
-            <div class="nav-links">
-                <a href="#features">Features</a>
-                <a href="#commands">Commands</a>
-                <a href="#usage">Usage</a>
-                <a href="#" class="github-btn"><i class="fab fa-github"></i> GitHub</a>
-            </div>
-        </nav>
-
-        <!-- Hero -->
-        <header class="hero">
-            <div class="badge-group">
-                <span class="badge"><i class="fas fa-check-circle"></i> Temporary & Safe</span>
-                <span class="badge"><i class="fas fa-microchip"></i> Kernel 4.14.186</span>
-                <span class="badge"><i class="fas fa-android"></i> Redmi K40 Gaming</span>
-            </div>
-            <h1>Unlock Kernel Communication<br /><span>Without the Mess</span></h1>
-            <p>
-                A lightweight, dynamically loaded kernel module that gives you a clean <strong>/dev/kern_chan</strong>
-                interface. Send commands, read kernel metrics, and vanish after reboot.
-            </p>
-            <div class="code-block">
-                <span class="prompt">$</span> <span class="cmd">echo "info" > /dev/kern_chan</span><br />
-                <span class="prompt">$</span> <span class="cmd">cat /dev/kern_chan</span><br />
-                <span style="color:#8b949e;">Kernel: Linux 4.14.186 ...</span>
-            </div>
-            <a href="#usage" class="btn-primary"><i class="fas fa-download"></i> Get Started Now</a>
-        </header>
-
-        <div class="divider"></div>
-
-        <!-- Features -->
-        <section id="features">
-            <div class="section-title"><i class="fas fa-cubes"></i> Why KernChan?</div>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <i class="fas fa-skull-crossbones"></i>
-                    <h3>No Permanent Changes</h3>
-                    <p>Loaded entirely into RAM. A single reboot wipes the module completely, leaving your system pristine.</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-terminal"></i>
-                    <h3>Command Dispatch</h3>
-                    <p>Built-in parser handles <code>info</code>, <code>mem</code>, <code>uptime</code>, <code>help</code> – easily extendable.</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-shield-alt"></i>
-                    <h3>Safe by Design</h3>
-                    <p><code>copy_from_user</code>, mutex locks, and strict permissions (<code>0660</code>) keep your kernel secure.</p>
-                </div>
-                <div class="feature-card">
-                    <i class="fas fa-rocket"></i>
-                    <h3>One‑Click Install</h3>
-                    <p>Download <code>install.sh</code>, push to device, and execute. Pre‑built for your exact kernel config.</p>
-                </div>
-            </div>
-        </section>
-
-        <div class="divider"></div>
-
-        <!-- Commands -->
-        <section id="commands">
-            <div class="section-title"><i class="fas fa-list-ul"></i> Supported Commands</div>
-            <div class="cmd-table-wrap">
-                <table class="cmd-table">
-                    <thead>
-                        <tr>
-                            <th>Command</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><span class="cmd-name">info</span></td>
-                            <td class="cmd-desc">Show kernel release, version, and architecture</td>
-                        </tr>
-                        <tr>
-                            <td><span class="cmd-name">mem</span></td>
-                            <td class="cmd-desc">Display total, free, and available RAM (MB)</td>
-                        </tr>
-                        <tr>
-                            <td><span class="cmd-name">uptime</span></td>
-                            <td class="cmd-desc">System uptime in hours / minutes / seconds</td>
-                        </tr>
-                        <tr>
-                            <td><span class="cmd-name">help</span></td>
-                            <td class="cmd-desc">Print this command reference</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <p style="margin-top:1rem; color:#8b949e;">
-                <i class="fas fa-plus-circle" style="color:#58a6ff;"></i> Extend it easily: add your own handler in <code>cmd_table[]</code>.
-            </p>
-        </section>
-
-        <div class="divider"></div>
-
-        <!-- Usage -->
-        <section id="usage">
-            <div class="section-title"><i class="fas fa-play-circle"></i> How to Use</div>
-            <div class="steps">
-                <div class="step-item">
-                    <div class="step-num">1</div>
-                    <div class="step-content">
-                        <strong>Download the installer</strong><br />
-                        Grab <code>install.sh</code> from the <strong>Actions</strong> tab of the repository.
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-num">2</div>
-                    <div class="step-content">
-                        <strong>Push to your device</strong><br />
-                        <code>adb push install.sh /data/local/tmp/</code>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-num">3</div>
-                    <div class="step-content">
-                        <strong>Load the module (root required)</strong><br />
-                        <code>su -c "sh /data/local/tmp/install.sh"</code>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-num">4</div>
-                    <div class="step-content">
-                        <strong>Start talking to the kernel</strong><br />
-                        <code>echo "info" > /dev/kern_chan && cat /dev/kern_chan</code>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <div class="divider"></div>
-
-        <!-- Footer -->
-        <footer class="footer">
-            <p>
-                <i class="fas fa-code"></i> Built with <span style="color:#f6a85b;">❤</span> for the Android kernel community.<br />
-                Licensed under <a href="#">GPL v2</a> ·
-                <a href="#">GitHub Repository</a> ·
-                <i class="fas fa-undo-alt"></i> Reboot to unload.
-            </p>
-            <p style="margin-top:0.5rem; font-size:0.8rem;">
-                <i class="fas fa-triangle-exclamation" style="color:#f0883e;"></i> Use only on trusted devices. The author is not responsible for any damage.
-            </p>
-        </footer>
-
+    <div class="top-nav">
+        <a href="#start">start</a>
+        <a href="#commands">commands</a>
+        <a href="#howto">howto</a>
+        <a href="https://github.com/hgffdkhn-dot/Linux.NAS/tree/main">github</a>
     </div>
+
+    <h1>kernchan <small>a temporary kernel channel for Android</small></h1>
+
+    <ul class="badge-list">
+        <li>loads into RAM, gone after reboot</li>
+        <li>works on Redmi K40 Gaming (4.14.186)</li>
+        <li>speaks via <code>/dev/kern_chan</code></li>
+        <li>pre‑built, one‑script install</li>
+    </ul>
+
+    <p style="font-size:1.1rem; margin:1.5rem 0;">
+        You send a command, it answers with kernel info.  
+        No permanent changes, no risky hacks – just a clean pipe to the inside.
+    </p>
+
+    <pre><code>$ echo "info" > /dev/kern_chan
+$ cat /dev/kern_chan
+Kernel: Linux 4.14.186 #1 SMP ...</code></pre>
+
+    <p>
+        <a href="#howto">Jump to install →</a>
+    </p>
+
+    <hr>
+
+    <h2 id="commands">what you can ask</h2>
+
+    <table class="cmd-table">
+        <thead>
+            <tr><th>command</th><th>what it tells you</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><span class="cmd">info</span></td><td>kernel version, arch, release</td></tr>
+            <tr><td><span class="cmd">mem</span></td><td>total / free / available RAM (MB)</td></tr>
+            <tr><td><span class="cmd">uptime</span></td><td>how long the system has been running</td></tr>
+            <tr><td><span class="cmd">help</span></td><td>lists these commands</td></tr>
+        </tbody>
+    </table>
+
+    <p style="color:#4f4a3f; font-size:0.95rem;">
+        ✦ You can add your own commands by extending the <code>cmd_table[]</code> in the source.
+    </p>
+
+    <hr>
+
+    <h2 id="howto">how to get it running</h2>
+
+    <ol class="steps">
+        <li><strong>Grab the installer</strong> – download <code>install.sh</code> from the <a href="https://github.com/hgffdkhn-dot/Linux.NAS/actions">Actions</a> tab (latest build).</li>
+        <li><strong>Push to your phone</strong> – <code>adb push install.sh /data/local/tmp/</code></li>
+        <li><strong>Load it (root)</strong> – <code>su -c "sh /data/local/tmp/install.sh"</code></li>
+        <li><strong>Talk to kernel</strong> – <code>echo "info" > /dev/kern_chan && cat /dev/kern_chan</code></li>
+    </ol>
+
+    <p>
+        That’s it. The module lives only until you reboot – after that, it’s gone.
+    </p>
+
+    <hr>
+
+    <h2>notes & warnings</h2>
+    <ul style="list-style: none; padding-left: 0;">
+        <li style="margin-bottom:0.4rem;">⛔ <strong>Root required</strong> – insmod needs superuser.</li>
+        <li style="margin-bottom:0.4rem;">🔒 <strong>Use at your own risk</strong> – kernel access is powerful; keep it to trusted scripts.</li>
+        <li style="margin-bottom:0.4rem;">🧹 <strong>Clean unload</strong> – a reboot is the simplest way to remove everything.</li>
+        <li style="margin-bottom:0.4rem;">📦 <strong>Built for your kernel</strong> – the pre‑built module matches the <code>4.14.186</code> config from this device.</li>
+    </ul>
+
+    <hr>
+
+    <div class="footer">
+        <p>
+            <a href="https://github.com/hgffdkhn-dot/Linux.NAS/tree/main">repository</a> &nbsp;·&nbsp; 
+            gpl v2 &nbsp;·&nbsp; 
+            made for fun, not for production
+        </p>
+        <p style="margin-top:0.2rem; font-size:0.8rem;">
+            ⚡ if something breaks, you get to keep both pieces.
+        </p>
+    </div>
+
 </body>
-  </html>
+</html>
